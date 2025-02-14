@@ -1,16 +1,16 @@
 // TODO: Use the core file (need to change the way the babel config is loaded to load the X one instead of the core one)
 import childProcess from 'child_process';
-import glob from 'fast-glob';
 import path from 'path';
 import { promisify } from 'util';
 import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
+import * as fs from 'fs/promises';
+import { cjsCopy } from '@mui/monorepo/scripts/copyFilesUtils.mjs';
 import { getWorkspaceRoot } from './utils.mjs';
 
 const exec = promisify(childProcess.exec);
 
 const validBundles = [
-  // legacy build using ES6 modules
-  'legacy',
   // modern build with a rolling target using ES6 modules
   'modern',
   // build for node using commonJS modules
@@ -20,7 +20,7 @@ const validBundles = [
 ];
 
 async function run(argv) {
-  const { bundle, largeFiles, outDir: relativeOutDir, verbose, ignore: providedIgnore } = argv;
+  const { bundle, largeFiles, outDir: outDirBase, verbose, ignore: providedIgnore } = argv;
 
   if (validBundles.indexOf(bundle) === -1) {
     throw new TypeError(
@@ -28,11 +28,16 @@ async function run(argv) {
     );
   }
 
-  const env = {
-    NODE_ENV: 'production',
-    BABEL_ENV: bundle,
-    MUI_BUILD_VERBOSE: verbose,
-  };
+  const packageJsonPath = path.resolve('./package.json');
+  const packageJson = JSON.parse(await fs.readFile(packageJsonPath, { encoding: 'utf8' }));
+
+  const babelRuntimeVersion = packageJson.dependencies['@babel/runtime'];
+  if (!babelRuntimeVersion) {
+    throw new Error(
+      'package.json needs to have a dependency on `@babel/runtime` when building with `@babel/plugin-transform-runtime`.',
+    );
+  }
+
   const babelConfigPath = path.resolve(getWorkspaceRoot(), 'babel.config.js');
   const srcDir = path.resolve('./src');
   const extensions = ['.js', '.ts', '.tsx'];
@@ -44,32 +49,28 @@ async function run(argv) {
     '**/*.spec.ts',
     '**/*.spec.tsx',
     '**/*.d.ts',
+    '**/*.test/*.*',
+    '**/test-cases/*.*',
     ...(providedIgnore || []),
   ];
 
-  const topLevelNonIndexFiles = glob
-    .sync(`*{${extensions.join(',')}}`, { cwd: srcDir, ignore })
-    .filter((file) => {
-      return path.basename(file, path.extname(file)) !== 'index';
-    });
-  const topLevelPathImportsCanBePackages = topLevelNonIndexFiles.length === 0;
+  const outFileExtension = '.js';
 
-  const outDir = path.resolve(
-    relativeOutDir,
-    // We generally support top level path imports e.g.
-    // 1. `import ArrowDownIcon from '@mui/icons-material/ArrowDown'`.
-    // 2. `import Typography from '@mui/material/Typography'`.
-    // The first case resolves to a file while the second case resolves to a package first i.e. a package.json
-    // This means that only in the second case the bundler can decide whether it uses ES modules or CommonJS modules.
-    // Different extensions are not viable yet since they require additional bundler config for users and additional transpilation steps in our repo.
-    // Switch to `exports` field in v6.
-    {
-      node: topLevelPathImportsCanBePackages ? './node' : './',
-      modern: './modern',
-      stable: topLevelPathImportsCanBePackages ? './' : './esm',
-      legacy: './legacy',
-    }[bundle],
-  );
+  const relativeOutDir = {
+    node: './',
+    modern: './modern',
+    stable: './esm',
+  }[bundle];
+
+  const outDir = path.resolve(outDirBase, relativeOutDir);
+
+  const env = {
+    NODE_ENV: 'production',
+    BABEL_ENV: bundle,
+    MUI_BUILD_VERBOSE: verbose,
+    MUI_BABEL_RUNTIME_VERSION: babelRuntimeVersion,
+    MUI_OUT_FILE_EXTENSION: outFileExtension,
+  };
 
   const babelArgs = [
     '--config-file',
@@ -83,11 +84,16 @@ async function run(argv) {
     // Need to put these patterns in quotes otherwise they might be evaluated by the used terminal.
     `"${ignore.join('","')}"`,
   ];
+
+  if (outFileExtension !== '.js') {
+    babelArgs.push('--out-file-extension', outFileExtension);
+  }
+
   if (largeFiles) {
     babelArgs.push('--compact false');
   }
 
-  const command = ['yarn babel', ...babelArgs].join(' ');
+  const command = ['pnpm babel', ...babelArgs].join(' ');
 
   if (verbose) {
     // eslint-disable-next-line no-console
@@ -99,13 +105,27 @@ async function run(argv) {
     throw new Error(`'${command}' failed with \n${stderr}`);
   }
 
+  // cjs for reexporting from commons only modules.
+  // If we need to rely more on this we can think about setting up a separate commonjs => commonjs build for .cjs files to .cjs
+  // `--extensions-.cjs --out-file-extension .cjs`
+  await cjsCopy({ from: srcDir, to: outDir });
+
+  const isEsm = bundle === 'modern' || bundle === 'stable';
+  if (isEsm) {
+    const rootBundlePackageJson = path.join(outDir, 'package.json');
+    await fs.writeFile(
+      rootBundlePackageJson,
+      JSON.stringify({ type: 'module', sideEffects: false }),
+    );
+  }
+
   if (verbose) {
     // eslint-disable-next-line no-console
     console.log(stdout);
   }
 }
 
-yargs(process.argv.slice(2))
+yargs(hideBin(process.argv))
   .command({
     command: '$0 <bundle>',
     description: 'build package',

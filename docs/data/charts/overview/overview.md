@@ -1,48 +1,38 @@
 ---
-product: charts
-title: Charts - Overview
+title: React Charts
+productId: x-charts
+githubLabel: 'component: charts'
+packageName: '@mui/x-charts'
 ---
 
-# Charts - Overview
+# MUI X Charts
 
-<p class="description">This page groups general topics that are common to multiple charts.</p>
+<p class="description">A collection of React chart components for data visualization.</p>
 
-> ⚠️ This is an upcoming library. Please upvote 👍 features you would like to see first.
-> And comments if you have specific needs to be solved by them.
+{{"component": "@mui/docs/ComponentLinkHeader", "design": false}}
 
-:::info
-💡 If you do not see the charts you want in the menu, we may have forget it.
-Please open an issue to ask for it, explaining which need it solves.
-:::
+## Overview
 
-## Display charts
+MUI X Charts is a library of production-ready components for rendering charts with React.
+It uses [D3.js](https://d3js.org/) for data manipulation and SVGs for rendering.
 
-Charts can be rendered in two ways.
-With a single component or by composing sub components.
+The components provide a high level of customization, with beautiful defaults as well as extensive configuration props and flexible composition options.
+Theming features are designed to be frictionless when integrating with Material UI and other MUI X components, but they can also stand on their own and be customized to meet the needs of any design system.
 
-### Single charts
+The Charts package is **open-core**: The Community version is MIT-licensed and free forever, while more advanced features require a Pro commercial license.
+See [MUI X Licensing](/x/introduction/licensing/) for complete details.
 
-For common use case, single component is the recommended way.
+{{"demo": "ChartsOverviewDemo.js", "defaultCodeOpen": true}}
 
-You have to provide the `series` props.
-The `width` and `height` if the component is not responsive.
+## All MUI X Charts
 
-{{"demo": "SimpleCharts.js", "bg": "inline"}}
+The MIT-licensed Community version of the Charts package covers the most common use cases for data visualization.
+The Pro plan, denoted by the blue cube icon (<span class="plan-pro"></span>) throughout the documentation, expands on the Community version to support more complex visualizations.
 
-### Multiple charts
+{{"component": "modules/components/ChartComponentsGrid.js"}}
 
-To combine different charts, like lines with bars, you can use composition with `<ChartContainer />` and `<CartesianContextProvider />` wrappers.
+## Supported features
 
-Inside those wrappers, you can render `<XAxis />`, `<YAxis />`, or any plot component (`<BarPlot />`, `<LinePlot />`, `<ScatterPlot />`)
+Features shared across Chart components such as axes and legends are described in standalone documents:
 
-{{"demo": "Combining.js", "bg": "inline"}}
-
-## Axis management
-
-### Multiple axis scales
-
-### Axis customization
-
-## Zoom management
-
-## Data selection
+{{"component": "modules/components/ChartFeaturesGrid.js"}}
