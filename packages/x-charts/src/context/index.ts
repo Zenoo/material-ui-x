@@ -1,2 +1,6 @@
-export { CartesianContextProvider } from './CartesianContextProvider';
-export { DrawingProvider } from './DrawingProvider';
+export type {
+  HighlightScope,
+  FadeOptions,
+  HighlightItemData,
+  HighlightOptions,
+} from '../internals/plugins/featurePlugins/useChartHighlight';

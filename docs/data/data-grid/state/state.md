@@ -11,7 +11,7 @@ This prop has the same format as the returned value of `apiRef.current.exportSta
 The `initialState` can only be used to set the initial value of the state.
 The Data Grid will not react if you change the `initialState` value later on.
 
-If you need to fully control specific models, use the control props instead (e.g. [`prop.filterModel`](/x/react-data-grid/filtering/#controlled-filters) or [`prop.sortModel`](https://mui.com/x/react-data-grid/sorting/#controlled-sort-model)).
+If you need to fully control specific models, use the control props instead (for example [`prop.filterModel`](/x/react-data-grid/filtering/#controlled-filters) or [`prop.sortModel`](/x/react-data-grid/sorting/#controlled-sort-model)).
 You can find more information on the corresponding feature documentation page.
 :::
 
@@ -26,35 +26,27 @@ Do not access state values directly.
 The state itself is not considered a public API and its structure can change.
 :::
 
-The `@mui/x-data-grid-pro` package exposes a set of state selectors that take the `apiRef.current.state` as an argument and return a value.
+Data Grid packages expose a set of state selectors that take the `apiRef` as an argument and return a value.
 You can use them to get data from the state without worrying about its internal structure.
 
 ### Direct selector access
 
-The simplest way to use a selector is to call it as a function with `apiRef` as its first argument:
+The way to use a selector is to call it as a function with `apiRef` as its first argument:
 
 ```tsx
 const paginationModel = gridPaginationModelSelector(apiRef);
 ```
 
-:::info
-Calling with `apiRef.current.state` also works, but may cause side effects when multiple Data Grid instances are present on a single page.
-If you still need to call it with the state, don't forget to pass the instance ID as the example:
-
-```tsx
-const paginationModel = gridPaginationModelSelector(
-  apiRef.current.state,
-  apiRef.current.instanceId,
-);
-```
-
+:::warning
+To make the developer experience better, selectors are typed to allow `apiRef` to reference a `null` value, but they throw an error if called before the state is initialized. Use selectors after the initialization in a `useEffect()` hook or in an event handler.
 :::
 
 {{"demo": "DirectSelector.js", "bg": "inline"}}
 
 ### With useGridSelector
 
-If you only need to access the state value in the render of your components, use the `useGridSelector` hook:
+If you only need to access the state value in the render of your components, use the `useGridSelector()` hook.
+This hook ensures there is a reactive binding such that when the state changes, the component in which this hook is used is re-rendered.
 
 ```tsx
 const paginationModel = useGridSelector(apiRef, gridPaginationModelSelector);
@@ -84,13 +76,25 @@ But if the callback is not defined or if calling it does not update the prop val
 ### Restore the state with initialState
 
 You can pass the state returned by `apiRef.current.exportState()` to the `initialState` prop.
+
 In the demo below, clicking on **Recreate the 2nd grid** will re-mount the second Data Grid with the current state of the first Grid.
+
+{{"demo": "RestoreStateInitialState.js", "bg": "inline", "defaultCodeOpen": false}}
 
 :::warning
 If you restore the page using `initialState` before the data is fetched, the Data Grid will automatically move to the first page.
 :::
 
-{{"demo": "RestoreStateInitialState.js", "bg": "inline", "defaultCodeOpen": false}}
+### Save and restore the state from external storage
+
+You can use `apiRef.current.exportState()` to save a snapshot of the state to an external storage (for example using local storage or redux).
+This way the state can be persisted on refresh or navigating to another page.
+
+In the following demo, the state is saved to `localStorage` and restored when the page is refreshed.
+This is done by listening on the `beforeunload` event.
+When the component is unmounted, the `useLayoutEffect` cleanup function is being used instead.
+
+{{"demo": "SaveAndRestoreStateInitialState.js", "bg": "inline", "defaultCodeOpen": false}}
 
 ### Restore the state with apiRef
 

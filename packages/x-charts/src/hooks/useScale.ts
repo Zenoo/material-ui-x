@@ -1,52 +1,41 @@
-import {
-  scaleBand,
-  scaleLog,
-  scalePoint,
-  scalePow,
-  scaleSqrt,
-  scaleTime,
-  scaleUtc,
-  scaleLinear,
-} from 'd3-scale';
-import type {
-  ScaleBand,
-  ScaleLogarithmic,
-  ScalePoint,
-  ScalePower,
-  ScaleTime,
-  ScaleLinear,
-} from 'd3-scale';
-import { ScaleName } from '../models/axis';
+'use client';
+import { isBandScale } from '../internals/isBandScale';
+import { AxisId, AxisScaleConfig, D3Scale, ScaleName } from '../models/axis';
+import { useXAxis, useYAxis } from './useAxis';
 
-export type D3Scale =
-  | ScaleBand<any>
-  | ScaleLogarithmic<any, any>
-  | ScalePoint<any>
-  | ScalePower<any, any>
-  | ScaleTime<any, any>
-  | ScaleLinear<any, any>;
-
-export function getScale(scaleName: ScaleName | undefined): D3Scale {
-  switch (scaleName) {
-    case 'band':
-      return scaleBand();
-    case 'log':
-      return scaleLog();
-    case 'point':
-      return scalePoint();
-    case 'pow':
-      return scalePow();
-    case 'sqrt':
-      return scaleSqrt();
-    case 'time':
-      return scaleTime();
-    case 'utc':
-      return scaleUtc();
-    default:
-      return scaleLinear();
+/**
+ * For a given scale return a function that map value to their position.
+ * Useful when dealing with specific scale such as band.
+ * @param {D3Scale} scale The scale to use
+ * @returns {(value: any) => number} A function that map value to their position
+ */
+export function getValueToPositionMapper(scale: D3Scale): (value: any) => number {
+  if (isBandScale(scale)) {
+    return (value: any) => (scale(value) ?? 0) + scale.bandwidth() / 2;
   }
+  return (value: any) => scale(value) as number;
 }
 
-export function isBandScale(scale: D3Scale): scale is ScaleBand<any> | ScalePoint<any> {
-  return (scale as ScaleBand<any> | ScalePoint<any>).bandwidth !== undefined;
+/**
+ * Get the X scale.
+ *
+ * @param {AxisId | undefined} axisId - If provided returns the scale for the x axis with axisId, else returns the values for the default x axis.
+ * @returns {AxisScaleConfig[S]['scale']} The scale for the specified X axis.
+ */
+export function useXScale<S extends ScaleName>(axisId?: AxisId): AxisScaleConfig[S]['scale'] {
+  const axis = useXAxis(axisId);
+
+  return axis.scale;
+}
+
+/**
+ * Get the Y scale.
+ *
+ * @param {AxisId | undefined} axisId - If provided returns the scale for the y axis with axisId, else returns the values for the default y axis.
+ * @returns {AxisScaleConfig[S]['scale']} The scale for the specified Y axis.
+ */
+export function useYScale<S extends ScaleName>(axisId?: AxisId): AxisScaleConfig[S]['scale'] {
+  const axis = useYAxis(axisId);
+
+  return axis.scale;
 }
